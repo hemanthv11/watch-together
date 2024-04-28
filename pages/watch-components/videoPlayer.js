@@ -6,7 +6,7 @@ import io from 'socket.io-client'
 export default function VideoPlayer({ vidId, roomId }) {
     const playerRef = useRef(null)
     useEffect(() => {
-        const socket = io('http://localhost:5050')
+        const socket = io('http://127.0.0.1:5050')
 
         const player = videojs('my-video', {
             controls: true,

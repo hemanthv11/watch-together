@@ -10,7 +10,7 @@ import VideoQueue from "./watch-components/videoQueue"
 import ChatView from "./watch-components/chatView"
 import ViewersList from "./watch-components/viewersList"
 
-export default function Room(room) {
+export default function Watch(room) {
     // video player component
     // chat component
     // video queue component

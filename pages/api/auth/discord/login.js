@@ -51,10 +51,10 @@ export default async function handler(req, res) {
         })
 
         console.log('user', user.data)
+        console.log('discordId', user.data.id)
 
         // Check if the user is already in the database
         let userExist = await User.findOne({ discordId: user.data.id })
-
         if(userExist) {
             // Update the user's refresh token
             userExist.refreshToken = refreshToken

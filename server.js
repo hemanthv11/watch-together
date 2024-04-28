@@ -9,7 +9,7 @@ const tokenVerifier = require('./utils/verify')
 const cookieParser = require('cookie-parser')
 const { Server } = require('socket.io')
 const http = require('http')
-const MongoQ = require('./utils/mongo-schema-builder')
+const {MongoQ} = require('./utils/mongo-schema-builder')
 
 dotenv.config()
 
@@ -36,15 +36,12 @@ app.prepare().then(() => {
 
     router.get('/', async (req, res) => {
         // get session token
-        console.log('Home route')
         const token = req.cookies.token
         if(token) {   
-            console.log('token', token)
             const user = await tokenVerifier(token)
-            console.log(user)
             if(user && user.error) {
                 console.log('error', user.error)
-                res.redirect('/login/error')
+                res.redirect('/')
                 return
             }
             console.log('redirecting to /app')
@@ -55,9 +52,7 @@ app.prepare().then(() => {
 
     router.get('/app', async (req, res) => {
         const q = req.query
-        console.log('Query', q)
         const token = req.cookies.token
-        console.log('/app route')
         if(token) {
             const user = await tokenVerifier(token)
             console.log('token', token)
@@ -72,16 +67,25 @@ app.prepare().then(() => {
         res.redirect('/')
     })
 
-    router.get('/watch', (req, res) => {
+    router.get('/watch', async (req, res) => {
         // login check
-        const token = req.cookies.token
-        if(!token) {
-            res.redirect('/')
-        }
+        // const token = req.cookies.token
+        // if(!token) {
+        //     res.redirect('/')
+        // }
         const room = req.query.room
         // check room validity in the database
-        
-        return app.render(req, res, '/watch', { room })
+        const mq = new MongoQ()
+        await mq.checkRoom(room).then((room) => {
+            if(room) {
+                return app.render(req, res, '/watch', { room })
+            } else {
+                return app.render(req, res, '/not_found')
+            }
+        }).catch((err) => {
+            console.error(err)
+            return app.render(req, res, '/not_found')
+        })
     })
 
     router.get('/health', (req, res) => {
@@ -90,6 +94,35 @@ app.prepare().then(() => {
 
     router.get('*', (req, res) => {
         return handle(req, res)
+    })
+
+    router.post('/api/room', async (req, res) => {
+        const token = req.cookies.token
+        console.log('Token', req.cookies)
+        let user
+        if(token) {
+            console.log('Token found', token)
+            user = await tokenVerifier(token)
+            console.log('user', user)
+        } else {
+            res.redirect('/')
+            return
+        }
+        const name = req.body.name
+        const roomCode = Math.random().toString(36).substring(2, 7)
+        const roomUrl = Math.random().toString(36).substring(2, 15) + Date.now().toString(36)
+        const roomVidCollection = req.body.vidCollection
+        const room = {
+            roomName: name,
+            roomCode: roomCode,
+            roomUrl: roomUrl,
+            roomOwner: user._id,
+            roomVideos: roomVidCollection
+        }
+        console.log('Creating room', room.roomCode)
+        const mq = new MongoQ()
+        await mq.createRoom(room)
+        res.send(room)
     })
 
     let key, cert

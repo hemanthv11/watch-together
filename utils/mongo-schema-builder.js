@@ -154,6 +154,10 @@ const roomSchema = new mongoose.Schema({
         required: true,
         ref: 'User'
     },
+    roomCode: {
+        type: String,
+        required: true
+    },
     roomMembers: {
         type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
     },
@@ -166,17 +170,25 @@ const roomSchema = new mongoose.Schema({
     }
 })
 
+const chatSchema = new mongoose.Schema({
+    roomId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'Room'
+    },
+    // array of user, message pairs
+    chat: {
+        type: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, message: String }]
+    }
+})
+
 const User = mongoose.models.User || mongoose.model('User', userSchema)
 const VideoCollection = mongoose.models.VideoCollection || mongoose.model('VideoCollection', videoCollectionSchema)
 const Video = mongoose.models.Video || mongoose.model('Video', videoSchema)
 const Room = mongoose.models.Room || mongoose.model('Room', roomSchema)
+const Chat = mongoose.models.Chat || mongoose.model('Chat', chatSchema)
 
-module.exports = {
-    User,
-    VideoCollection,
-    Video,
-    Room
-}
+
 
 class MongoQ{
     constructor() {
@@ -187,10 +199,42 @@ class MongoQ{
     }
 
     async createRoom(room){
+        // create roomId
+        room.roomId = new mongoose.Types.ObjectId()
         const newRoom = new this.Room(room)
         await newRoom.save()
         return newRoom.roomUrl
     }
+
+    async checkRoom(roomUrl){
+        const room = await this.Room.findOne({roomUrl})
+        return room
+    }
+    
+    async addViewer(roomUrl, userId){
+        const room = await this.Room.findOne({roomUrl})
+        room.roomMembers.push(userId)
+        await room.save()
+    }
+
+    async removeViewer(roomUrl, userId){
+        const room = await this.Room.findOne({roomUrl})
+        room.roomMembers = room.roomMembers.filter((id) => id !== userId)
+        await room.save()
+    }
+
+    async addVideoToQueue(roomUrl, videoId){
+        const room = await this.Room.findOne({roomUrl})
+        room.roomVideos.push(videoId)
+        await room.save()
+    }
 }
 
-module.exports = MongoQ
+module.exports = {
+    User,
+    VideoCollection,
+    Video,
+    Room,
+    Chat,
+    MongoQ
+}

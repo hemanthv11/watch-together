@@ -5,12 +5,15 @@ import axios from "axios"
 
 import StandardToolBar from "./menus/standardToolBar"
 import QuickVideos from "./create-components.js/quickVideos"
+import { set } from "mongoose"
 
 export default function Create() {
     // react component to create a new room
     // get the room code from the server and redirect the user to the room
     const [room, setRoom] = useState("")
     const [notification, setNotification] = useState(false)
+    const [token, setToken] = useState('')
+    
     const showNotification = () => {
         setNotification(true);
         setTimeout(() => {
@@ -20,10 +23,11 @@ export default function Create() {
     };
     async function getRoom() {
         const roomName = document.getElementById('room-name').value
-        await axios.post('http://localhost:5050/api/room', {name: roomName}).then((res) => {
+        await axios.post('http://127.0.0.1:5050/api/room', {name: roomName}, {withCredentials: true})
+        .then((res) => {
             let room = res.data
-            let roomCode = room.code
-            let roomUrl = room.url
+            let roomCode = room.roomCode
+            let roomUrl = room.roomUrl
             setRoom(room)
             navigator.clipboard.writeText(roomCode)
             showNotification()

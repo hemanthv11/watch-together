@@ -12,7 +12,8 @@ const tokenVerifier = async (token) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     let user
     try {
-        user = await User.findOne({ discordId: decoded.id })
+        const id = decoded.discordId
+        user = await User.findOne({ discordId:id })
     } catch(err) {
         return { error: 'Error fetching user' }
     }
