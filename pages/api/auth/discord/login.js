@@ -96,7 +96,13 @@ export default async function handler(req, res) {
 
         // set the cookie and redirect to the home page
         res.setHeader('Set-Cookie', `token=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=1209600`)
-        return res.redirect('/app')
+        res.status(200)
+        res.redirect('/app')
+        // delay the redirect to allow the cookie to be set
+        // setTimeout(() => {
+        //     console.log('redirecting to /app')
+        //     res.redirect('/app')
+        // }, 1000)
     } else {
         return res.status(500).json({ error: 'Internal server error' })
     }

@@ -1,12 +1,16 @@
 import React from "react"
 import { useState, useEffect } from "react"
+import axios from "axios"
 
 export default function StandardToolBar() {
-    const [loggedIn, setLoggedIn] = useState(false)
+    const [flag, setFlag] = useState(false)
     useEffect(() => {
-        if (localStorage.getItem('user')) {
-            setLoggedIn(true)
-        }
+        axios.get('/api/auth/verify')
+        .then((res) => {
+            if(res.data.loggedIn) {
+                setFlag(true)
+            }
+        })
     }, [])
     return (
         <section className="flex justify-between items-center p-4 bg-blue-600 shadow-md">
@@ -25,9 +29,12 @@ export default function StandardToolBar() {
                 <div className="flex items-center">
                     <a href="/contact" className="text-white font-bold py-2 px-4 rounded-lg">Contact</a>
                 </div>
-                {loggedIn && <div className="flex items-center">
-                    <a href="/logout" className="text-white font-bold py-2 px-4 rounded-lg" onClick={() => {localStorage.removeItem('user'); setLoggedIn(false)}}>Logout</a>
-                </div>}
+                {flag && <div className="flex items-center cursor-pointer"><a className="text-white font-bold py-2 px-4 rounded-lg" onClick={
+                    async () => {
+                        await axios.get("/api/auth/logout")
+                        window.location.href = "/"
+                    }
+                }>Log Out</a></div>}
             </div>
         </section>
     )

@@ -111,6 +111,9 @@ const videoCollectionSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    videoCollectionThumbnail: {
+        type: String // url to the thumbnail
+    },
     videoIds: {
         type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Video' }]
     }
@@ -134,6 +137,11 @@ const videoSchema = new mongoose.Schema({
 const roomSchema = new mongoose.Schema({
     roomId: {
         type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        unique: true
+    },
+    roomUrl: {
+        type: String,
         required: true,
         unique: true
     },
@@ -169,3 +177,20 @@ module.exports = {
     Video,
     Room
 }
+
+class MongoQ{
+    constructor() {
+        this.User = User
+        this.VideoCollection = VideoCollection
+        this.Video = Video
+        this.Room = Room
+    }
+
+    async createRoom(room){
+        const newRoom = new this.Room(room)
+        await newRoom.save()
+        return newRoom.roomUrl
+    }
+}
+
+module.exports = MongoQ

@@ -10,45 +10,47 @@ import VideoQueue from "./watch-components/videoQueue"
 import ChatView from "./watch-components/chatView"
 import ViewersList from "./watch-components/viewersList"
 
-export default function Watch(room) {
+export default function Room(room) {
     // video player component
     // chat component
     // video queue component
     // viewer list component
 
     //get video stream from server
-    const [video, setVideo] = useState("")
-    useEffect(() => {
-        // get video stream from server
-        axios.get(`http://localhost:5050/api/video/${room}`).then((res) => {
-            setVideo(res.data)
-        }).catch((err) => {
-            console.log(err)
-        })
-    }, [])
+    // const [video, setVideo] = useState("")
+    // useEffect(() => {
+    //     // get video stream from server
+    //     axios.get(`http://localhost:5050/api/video/${room}`).then((res) => {
+    //         setVideo(res.data)
+    //     }).catch((err) => {
+    //         console.log(err)
+    //     })
+    // }, [])
 
-    //get video queue from server
-    const [queue, setQueue] = useState([])
-    useEffect(() => {
-        // get video queue from server
-        axios.get(`http://localhost:5050/api/queue/${room}`).then((res) => {
-            setQueue(res.data)
-        }
-        ).catch((err) => {
-            console.log(err)
-        })
-    })
+    // //get video queue from server
+    // const [queue, setQueue] = useState([])
+    // useEffect(() => {
+    //     // get video queue from server
+    //     axios.get(`http://localhost:5050/api/queue/${room}`).then((res) => {
+    //         setQueue(res.data)
+    //     }
+    //     ).catch((err) => {
+    //         console.log(err)
+    //     })
+    // })
 
-    //get viewer list from server
-    const [viewers, setViewers] = useState([])
-    useEffect(() => {
-        // get viewer list from server
-        axios.get(`http://localhost:5050/api/viewers/${room}`).then((res) => {
-            setViewers(res.data)
-        }).catch((err) => {
-            console.log(err)
-        })
-    }, [])
+    // //get viewer list from server
+    // const [viewers, setViewers] = useState([]) 
+    // useEffect(() => {
+    //     // get viewer list from server
+    //     axios.get(`http://localhost:5050/api/viewers/${room}`).then((res) => {
+    //         setViewers(res.data)
+    //     }).catch((err) => {
+    //         console.log(err)
+    //     })
+    // }, [])
+    let video
+    let queue = []
 
     return (
         <div className="h-screen bg-gray-900">
@@ -56,7 +58,7 @@ export default function Watch(room) {
             <div className="flex flex-row">
                 <div className="w-3/4 flex flex-col">
                     <div>
-                        <VideoPlayer vidId={video} />
+                        <VideoPlayer vidId={video} roomId={room} />
                     </div>
                     <div>
                         <VideoQueue room={room} queue={queue} />

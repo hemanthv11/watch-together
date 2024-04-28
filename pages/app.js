@@ -10,9 +10,18 @@ export default function App() {
     // react component with a form component to get the room code from the user and redirect them to the room
     // else give options to create a new room, upload a video and manage uploaded videos
     const [room, setRoom] = useState("")
+    const [flag, setFlag] = useState(false)
+    useEffect(() => {
+        axios.get('/api/auth/verify')
+        .then((res) => {
+            if(res.data.loggedIn) {
+                setFlag(true)
+            }
+        })
+    }, [])
     return(
         <div>
-            <StandardToolBar/>
+            <StandardToolBar loggedIn={flag}/>
             <div className="h-screen flex flex-col justify-center items-center bg-gray-900 text-white">
                 <div className="w-2/3">
                     <form className="flex flex-row justify-start">
@@ -25,7 +34,9 @@ export default function App() {
                     </form>
                     {/* buttons section */}
                     <div className="flex flex-col mt-4 justify-start">
-                        <button className="rounded-lg p-2 bg-blue-600 text-white w-2/3 mt-4">Create Room</button>
+                        <button className="rounded-lg p-2 bg-blue-600 text-white w-2/3 mt-4" onClick={
+                            () => {window.location.href = "/create"}
+                        }>Create Room</button>
                         <button className="rounded-lg p-2 bg-blue-600 text-white w-2/3 mt-4">Upload Video</button>
                         <button className="rounded-lg p-2 bg-blue-600 text-white w-2/3 mt-4">Manage Videos</button>
                     </div>

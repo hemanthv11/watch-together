@@ -7,6 +7,9 @@ const bodyParser = require('body-parser')
 const next = require('next')
 const tokenVerifier = require('./utils/verify')
 const cookieParser = require('cookie-parser')
+const { Server } = require('socket.io')
+const http = require('http')
+const MongoQ = require('./utils/mongo-schema-builder')
 
 dotenv.config()
 
@@ -19,7 +22,6 @@ const handle = app.getRequestHandler()
 if(dev == true) {
     console.log('Running in development mode')
     port = 5050
-    
 } else {
     console.log('Running in production mode')
     port = process.env.PORT || 5050
@@ -32,30 +34,54 @@ app.prepare().then(() => {
     router.use(bodyParser.json())
     router.use(cookieParser())
 
-    router.get('/', (req, res) => {
+    router.get('/', async (req, res) => {
         // get session token
+        console.log('Home route')
         const token = req.cookies.token
-        if(token) {
-            const user = tokenVerifier(token)
-            if(user.error) {
-                return app.render(req, res, '/')
+        if(token) {   
+            console.log('token', token)
+            const user = await tokenVerifier(token)
+            console.log(user)
+            if(user && user.error) {
+                console.log('error', user.error)
+                res.redirect('/login/error')
+                return
             }
-            return app.render(req, res, '/app', { user })
+            console.log('redirecting to /app')
+            res.redirect('/app')
         }
         return app.render(req, res, '/')
     })
 
-    router.get('/app', (req, res) => {
-        // get session token
+    router.get('/app', async (req, res) => {
+        const q = req.query
+        console.log('Query', q)
         const token = req.cookies.token
+        console.log('/app route')
         if(token) {
-            const user = tokenVerifier(token)
-            if(user.error) {
-                return app.render(req, res, '/')
+            const user = await tokenVerifier(token)
+            console.log('token', token)
+            console.log('user', user)
+            if(user && user.error) {
+                console.log('User in app', user)
+                res.redirect('/')
             }
-            return app.render(req, res, '/app', { user })
+            return app.render(req, res, '/app')
         }
-        return app.render(req, res, '/')
+        console.log('No token found')
+        res.redirect('/')
+    })
+
+    router.get('/watch', (req, res) => {
+        // login check
+        const token = req.cookies.token
+        if(!token) {
+            res.redirect('/')
+        }
+        const room = req.query.room
+        // check room validity in the database
+        
+        return app.render(req, res, '/watch', { room })
     })
 
     router.get('/health', (req, res) => {
@@ -64,24 +90,6 @@ app.prepare().then(() => {
 
     router.get('*', (req, res) => {
         return handle(req, res)
-    })
-
-    router.post('/api/room', (req, res) => {
-        const name = req.body.name
-        const roomCode = Math.random().toString(36).substring(2, 7)
-        const roomUrl = Math.random().toString(36).substring(2, 9)
-        const room = {
-            name: name,
-            code: roomCode,
-            url: roomUrl
-        }
-        res.send(room)
-    })
-
-    // query processing
-    router.get('/watch?', (req, res) => {
-        const room = req.query.room
-        return app.render(req, res, '/watch', { room })
     })
 
     let key, cert
@@ -96,12 +104,30 @@ app.prepare().then(() => {
     }
 
     if(server){
-        server = https.createServer({ key, cert }, router)
+        httpServer = https.createServer({ key, cert }, router)
     } else {
-        server = router
+        httpServer = http.createServer(router)
     }
 
-    server.listen(port, () => {
+    const io = new Server(httpServer)
+
+    io.on('connection', (socket) => {
+        console.log('A user connected')
+        socket.on('join', (room) => {
+            socket.join(room)
+        })
+        socket.on('video', (data) => {
+            console.log('Video data', data)
+            socket.broadcast.emit('video', data)
+            socket.to(data.room).emit('video', data)
+        })
+        socket.on('disconnect', () => {
+            console.log('A user disconnected')
+        })
+    })
+
+
+    httpServer.listen(port, () => {
         console.log(`Server is running on https://localhost:${port}/`)
     })
 

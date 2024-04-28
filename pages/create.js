@@ -4,6 +4,7 @@ import 'tailwindcss/tailwind.css'
 import axios from "axios"
 
 import StandardToolBar from "./menus/standardToolBar"
+import QuickVideos from "./create-components.js/quickVideos"
 
 export default function Create() {
     // react component to create a new room
@@ -40,7 +41,7 @@ export default function Create() {
             {notification && <div>Room code copied to clipboard</div>}
             <div className="h-screen flex flex-col justify-center items-center bg-gray-900 text-white">
                 <div className="w-2/3">
-                    <form className="flex flex-row justify-start">
+                    <form className="flex flex-row justify-center">
                         <input id="room-name" type="text" placeholder="Enter Room Name" className="rounded-lg p-2 text-black mr-2 w-2/3"/>
                         <button className="rounded-lg p-2 bg-blue-600 text-white" onClick={(e)=>{
                             e.preventDefault()
@@ -48,7 +49,7 @@ export default function Create() {
                         }}>Create Room</button>
                     </form>
                     {/* Instructions */}
-                    <div className="flex flex-col mt-4 justify-start">
+                    <div className="flex flex-col mt-4 justify-center">
                         <span className="text-white">
                             Create a room and share the room code with your friends to watch videos together.
                         </span>
@@ -57,6 +58,7 @@ export default function Create() {
                         </span>
                     </div>
                 </div>
+                <QuickVideos/>
             </div>
         </div>
     )
