@@ -97,6 +97,16 @@ app.prepare().then(() => {
         }
     })
 
+    router.get('/api/auth/username', async (req, res) => {
+        const token = req.cookies.token
+        const user = await tokenVerifier(token)
+        if(user && user.error) {
+            res.send({ error: 'User not found' })
+        } else {
+            res.send(user.global_name)
+        }
+    })
+
     router.get('/api/join/:room', async (req, res) => {
         const room = req.params.room
         const mq = new MongoQ()
@@ -119,6 +129,13 @@ app.prepare().then(() => {
         } else{
             res.send(user._id)
         }
+    })
+
+    router.get('/api/chat/:roomId', async (req, res) => {
+        const { roomId } = req.params
+        const mq = new MongoQ()
+        const chat = await mq.getChat(roomId)
+        res.send(chat)
     })
 
     router.get('/health', (req, res) => {
@@ -205,14 +222,25 @@ app.prepare().then(() => {
 
     io.on('connection', (socket) => {
         console.log('A user connected')
+    
         socket.on('join', (room) => {
             socket.join(room)
         })
+    
         socket.on('video', (data) => {
             console.log('Video data', data)
             socket.broadcast.emit('video', data)
             socket.to(data.room).emit('video', data)
         })
+    
+        // Listen for chat messages
+        socket.on('chat message', (message) => {
+            console.log('Chat message', message)
+            // Broadcast the message to all clients in the same room
+            console.log('Message room', message.room)
+            socket.to(message.room).emit('chat message', message)
+        })
+    
         socket.on('disconnect', () => {
             console.log('A user disconnected')
         })

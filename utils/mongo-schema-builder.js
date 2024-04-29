@@ -230,6 +230,11 @@ class MongoQ{
         return room
     }
 
+    async getGlobalName(userId){
+        const user = await this.User.findOne({id: userId})
+        return user.global_name
+    }
+
     async getChat(roomId){
         const chat = await this.Chat.findOne({roomId})
         return chat // array of user, message pairs

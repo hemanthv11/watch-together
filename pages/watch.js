@@ -15,6 +15,7 @@ export default function Watch(room) {
     // chat component
     // video queue component
     // viewer list component
+    console.log('Room', room)
     const [owner, setOwner] = useState(false) // check if the user is the owner of the room
     const [queue, setQueue] = useState([]) // video queue for VideoQueue component
     // const [video, setVideo] = useState(room.roomVideos[0]) // video to play in the video player
@@ -60,15 +61,15 @@ export default function Watch(room) {
                         <VideoPlayer vidurl={"https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8"} roomId={room} />
                     </div>
                     <div>
-                        <VideoQueue room={room} queue={queue}/>
+                        <VideoQueue room={room.roomData} queue={queue}/>
                     </div>
                 </div>
                 <div className="w-1/4 mr-2">
                     <div>
-                        <ChatView room={room}/>
+                        <ChatView room={room.roomData}/>
                     </div>
                     <div>
-                        <ViewersList room={room}/>
+                        <ViewersList room={room.roomData}/>
                     </div>
                 </div>
             </div>
