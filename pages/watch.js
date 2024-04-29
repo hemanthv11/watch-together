@@ -21,7 +21,7 @@ export default function Watch(room) {
     // const [video, setVideo] = useState(room.roomVideos[0]) // video to play in the video player
     useEffect(async () => {
         // setQueue(room.roomVideos) // loads the video queue
-        const res = await axios.get('/api/owner/room')
+        const res = await axios.get('/api/current/room')
         if(res.data === room.roomData.roomOwner){
             setOwner(true)
         }

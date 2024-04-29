@@ -165,7 +165,7 @@ const chatSchema = new mongoose.Schema({
     },
     // array of user, message pairs
     chat: {
-        type: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, message: String }]
+        type: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, message: String, global_name: String}]
     }
 })
 
@@ -242,12 +242,18 @@ class MongoQ{
 
     async addChatSession(roomId){
         const chat = new this.Chat({roomId})
+        // add a welcome message to the chat
+        chat.chat.push({user: process.env.SYSTEM_ID, message: 'Welcome to the chat', global_name: 'System'})
         await chat.save()
     }
 
-    async addChatMessage(roomId, userId, message){
-        const chat = await this.Chat.findOne({roomId})
-        chat.chat.push({user: userId, message})
+    async addChatMessage(roomId, userId, message, global_name){
+        let chat = await this.Chat.findOne({roomId})
+        // if chat session does not exist, create one
+        if(!chat){
+            chat = await this.addChatSession(roomId)
+        }
+        chat.chat.push({userId, message, global_name})
         await chat.save()
     }
 }

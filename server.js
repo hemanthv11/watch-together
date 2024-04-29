@@ -121,7 +121,7 @@ app.prepare().then(() => {
         }
     })
 
-    router.get('/api/owner/room', async (req, res) => {
+    router.get('/api/current/room', async (req, res) => {
         const token = req.cookies.token
         const user = await tokenVerifier(token)
         if(user && user.error) {
@@ -201,6 +201,13 @@ app.prepare().then(() => {
 
     })
 
+    router.post('/api/chat', async (req, res) => {
+        const { roomId, message, userId, global_name } = req.body
+        const mq = new MongoQ()
+        await mq.addChatMessage(roomId, userId, message, global_name)
+        res.send({ success: 'Message sent' })
+    })
+
     let key, cert
     let server
     try{
@@ -239,6 +246,9 @@ app.prepare().then(() => {
             // Broadcast the message to all clients in the same room
             console.log('Message room', message.room)
             socket.to(message.room).emit('chat message', message)
+            // save the message to the database
+            const mq = new MongoQ()
+
         })
     
         socket.on('disconnect', () => {

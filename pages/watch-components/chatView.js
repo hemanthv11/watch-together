@@ -5,6 +5,8 @@ import io from 'socket.io-client';
 export default function ChatView({ room }) {
     const [chat, setChat] = useState([])
     const [userName, setUser] = useState('RLION')
+    const [userId, setUserId] = useState('')
+    const [message, setMessage] = useState('')
     const socketRef = useRef();
     const roomId = room._id
 
@@ -17,12 +19,19 @@ export default function ChatView({ room }) {
         .catch((err) => {
             console.log(err)
         })
+
+        axios.get('/api/current/room')
+        .then((res) => {
+            console.log('User', res.data)
+            setUserId(res.data)
+        })
     }, [])
 
     useEffect(() => {
         axios.get(`/api/chat/${roomId}`)
         .then((res) => {
-            setChat(res.data)
+            console.log(res.data)
+            // setChat(...chat, res.data)
         })
         .catch((err) => {
             console.log(err)
@@ -44,6 +53,17 @@ export default function ChatView({ room }) {
         }
     }, [chat])
 
+    useEffect(() => {
+        axios.post('/api/chat', { roomId, message: message, userId: userId, global_name: userName })
+        .then((res) => {
+            console.log(res)
+        })
+        .catch((err) => {
+            console.error(err)
+        })
+        setMessage('')
+    }, [chat])
+
     return(
         <div className="flex flex-col text-white mt-1 ml-2 mb-5 border-r-2 border-gray-500 p-1 rounded-lg" style={{ backgroundColor: '#364872', maxHeight: '400px', overflowY: 'auto' }}>
             <div className="text-xl bold">Chat</div>
@@ -62,11 +82,13 @@ export default function ChatView({ room }) {
                     () => {
                         const mg = document.getElementById('new-msg')
                         const message = mg.value
+                        setMessage(message)
                         const chatObj = { user: userName, message: message}
                         const sock = { user: userName, message: message, room: roomId}
                         socketRef.current.emit('chat message', sock)
                         setChat([...chat, chatObj])
                         mg.value = ''
+
                     }
                 }>Send</button>
             </div>
