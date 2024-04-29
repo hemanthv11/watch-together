@@ -235,20 +235,16 @@ app.prepare().then(() => {
         })
     
         socket.on('video', (data) => {
-            console.log('Video data', data)
             socket.broadcast.emit('video', data)
             socket.to(data.room).emit('video', data)
         })
     
         // Listen for chat messages
         socket.on('chat message', (message) => {
-            console.log('Chat message', message)
-            // Broadcast the message to all clients in the same room
-            console.log('Message room', message.room)
             socket.to(message.room).emit('chat message', message)
             // save the message to the database
             const mq = new MongoQ()
-
+            mq.addChatMessage(message.room, message.userId, message.message, message.global_name)
         })
     
         socket.on('disconnect', () => {

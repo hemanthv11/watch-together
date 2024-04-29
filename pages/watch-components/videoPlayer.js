@@ -20,7 +20,6 @@ export default function VideoPlayer({ vidurl, roomId }) {
                 type: 'application/x-mpegURL',
             }],
         })
-        console.log(roomId)
         socket.emit('join', roomId)
 
         player.on('play', () => {

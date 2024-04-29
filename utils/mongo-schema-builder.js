@@ -253,6 +253,8 @@ class MongoQ{
         if(!chat){
             chat = await this.addChatSession(roomId)
         }
+        if(message.length === 0)
+            return
         chat.chat.push({userId, message, global_name})
         await chat.save()
     }
