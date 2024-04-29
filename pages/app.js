@@ -19,6 +19,19 @@ export default function App() {
             }
         })
     }, [])
+    useEffect(() => {
+        if(room !== ""){
+            axios.get(`/api/join/${room}`)
+            .then((res) => {
+                console.log(res.data)
+                if(res.data && !res.data.error){
+                    window.location.href = `/watch?room=${res.data}`
+                } else {
+                    alert('Room does not exist')
+                }
+            })
+        }
+    }, [room])
     return(
         <div>
             <StandardToolBar loggedIn={flag}/>

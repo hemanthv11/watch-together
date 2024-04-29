@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react'
+import { useState } from 'react'
 import videojs from 'video.js'
 import 'video.js/dist/video-js.css'
 import io from 'socket.io-client'
+import axios from 'axios'
 
-export default function VideoPlayer({ vidId, roomId }) {
+export default function VideoPlayer({ vidurl, roomId }) {
     const playerRef = useRef(null)
     useEffect(() => {
         const socket = io('http://127.0.0.1:5050')
@@ -14,12 +16,12 @@ export default function VideoPlayer({ vidId, roomId }) {
             preload: 'auto',
             fluid: true,
             sources: [{
-                src: `https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8`,
+                src: vidurl,
                 type: 'application/x-mpegURL',
             }],
         })
         console.log(roomId)
-        socket.on('join', roomId)
+        socket.emit('join', roomId)
 
         player.on('play', () => {
             socket.emit('video', { action: 'play', time: player.currentTime(), roomId: roomId })

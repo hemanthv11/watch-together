@@ -15,56 +15,55 @@ export default function Watch(room) {
     // chat component
     // video queue component
     // viewer list component
-
-    //get video stream from server
-    // const [video, setVideo] = useState("")
-    // useEffect(() => {
-    //     // get video stream from server
-    //     axios.get(`http://localhost:5050/api/video/${room}`).then((res) => {
-    //         setVideo(res.data)
-    //     }).catch((err) => {
-    //         console.log(err)
-    //     })
-    // }, [])
-
-    // //get video queue from server
-    // const [queue, setQueue] = useState([])
-    // useEffect(() => {
-    //     // get video queue from server
-    //     axios.get(`http://localhost:5050/api/queue/${room}`).then((res) => {
-    //         setQueue(res.data)
-    //     }
-    //     ).catch((err) => {
-    //         console.log(err)
-    //     })
-    // })
-
-    // //get viewer list from server
-    // const [viewers, setViewers] = useState([]) 
-    // useEffect(() => {
-    //     // get viewer list from server
-    //     axios.get(`http://localhost:5050/api/viewers/${room}`).then((res) => {
-    //         setViewers(res.data)
-    //     }).catch((err) => {
-    //         console.log(err)
-    //     })
-    // }, [])
-    let video
-    let queue = []
+    const [owner, setOwner] = useState(false) // check if the user is the owner of the room
+    const [queue, setQueue] = useState([]) // video queue for VideoQueue component
+    // const [video, setVideo] = useState(room.roomVideos[0]) // video to play in the video player
+    useEffect(async () => {
+        // setQueue(room.roomVideos) // loads the video queue
+        const res = await axios.get('/api/owner/room')
+        if(res.data === room.roomData.roomOwner){
+            setOwner(true)
+        }
+    }, [])
 
     return (
         <div className="h-screen bg-gray-900">
             <StandardToolBar />
+            <div className="flex flex-row text-white p-5 align-items-center justify-between">
+                <div className="flex flex-row align-items-center justify-between">
+                    <div className="font-bold text-6xl mr-5">{room.roomData.roomName}</div>
+                    <div className="text-gray-400 align-items-center text-center mt-9" onClick={() => {
+                        navigator.clipboard.writeText(room.roomData.roomCode)
+                    }}>
+                    Code: {room.roomData.roomCode}</div>
+                </div>
+                {/* end room button */}
+                {owner &&
+                    <div className="bg-red-500 rounded-lg p-1 text-center flex flex-row items-center">
+                        <button className="text-white p-1"
+                        onClick={async () => {
+                            console.log('Ending room', room)
+                            axios.post('/api/room/end', {room: room.roomData},{withCredentials: true})
+                            .then((res) => {
+                                console.log(res)
+                                window.location.href = '/app'
+                            }).catch((err) => {
+                                console.error(err)
+                            })
+                        }}
+                        >End</button>
+                    </div>}
+            </div>
             <div className="flex flex-row">
                 <div className="w-3/4 flex flex-col">
                     <div>
-                        <VideoPlayer vidId={video} roomId={room} />
+                        <VideoPlayer vidurl={"https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8"} roomId={room} />
                     </div>
                     <div>
-                        <VideoQueue room={room} queue={queue} />
+                        <VideoQueue room={room} queue={queue}/>
                     </div>
                 </div>
-                <div className="w-1/4">
+                <div className="w-1/4 mr-2">
                     <div>
                         <ChatView room={room}/>
                     </div>
@@ -75,4 +74,33 @@ export default function Watch(room) {
             </div>
         </div>
     )
+}
+
+export async function getServerSideProps(context) {
+    const { room } = context.query
+    try {
+        const res = await axios.get(`http://127.0.0.1:5050/api/room/${room}`)
+        const roomData = res.data
+        return {
+            props: {
+                roomData
+            }
+        }
+    } catch (error) {
+        if (error instanceof AggregateError) {
+            // Log individual errors
+            for (const individualError of error.errors) {
+                console.error(individualError)
+            }
+        } else {
+            // Log any other errors
+            console.error(error)
+        }
+        // Return an empty roomData prop to avoid a serialization error
+        return {
+            props: {
+                roomData: {}
+            }
+        }
+    }
 }

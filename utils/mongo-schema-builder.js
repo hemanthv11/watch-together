@@ -96,30 +96,13 @@ const userSchema = new mongoose.Schema({
     }
 })
 
-const videoCollectionSchema = new mongoose.Schema({
-    userId: {
+
+const videoSchema = new mongoose.Schema({
+    id: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         ref: 'User'
     },
-    videoCollectionId: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        unique: true
-    },
-    videoCollectionName: {
-        type: String,
-        required: true
-    },
-    videoCollectionThumbnail: {
-        type: String // url to the thumbnail
-    },
-    videoIds: {
-        type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Video' }]
-    }
-})
-
-const videoSchema = new mongoose.Schema({
     videoId: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
@@ -131,6 +114,10 @@ const videoSchema = new mongoose.Schema({
     },
     videoDuration: {
         type: Number
+    },
+    videoUrl: {
+        type: String,
+        required: true
     }
 })
 
@@ -183,7 +170,7 @@ const chatSchema = new mongoose.Schema({
 })
 
 const User = mongoose.models.User || mongoose.model('User', userSchema)
-const VideoCollection = mongoose.models.VideoCollection || mongoose.model('VideoCollection', videoCollectionSchema)
+//const VideoCollection = mongoose.models.VideoCollection || mongoose.model('VideoCollection', videoCollectionSchema)
 const Video = mongoose.models.Video || mongoose.model('Video', videoSchema)
 const Room = mongoose.models.Room || mongoose.model('Room', roomSchema)
 const Chat = mongoose.models.Chat || mongoose.model('Chat', chatSchema)
@@ -193,9 +180,9 @@ const Chat = mongoose.models.Chat || mongoose.model('Chat', chatSchema)
 class MongoQ{
     constructor() {
         this.User = User
-        this.VideoCollection = VideoCollection
         this.Video = Video
         this.Room = Room
+        this.Chat = Chat
     }
 
     async createRoom(room){
@@ -217,6 +204,10 @@ class MongoQ{
         await room.save()
     }
 
+    async checkOwnerVideoAccess(roomUrl, userId){
+        const video = await this.Video.findOne({userId})
+    }
+
     async removeViewer(roomUrl, userId){
         const room = await this.Room.findOne({roomUrl})
         room.roomMembers = room.roomMembers.filter((id) => id !== userId)
@@ -228,11 +219,36 @@ class MongoQ{
         room.roomVideos.push(videoId)
         await room.save()
     }
+
+    async endRoom(roomUrl){
+        const room = await this.Room.deleteOne({roomUrl})
+        return room
+    }
+
+    async getRoom(roomCode){
+        const room = await this.Room.findOne({roomCode})
+        return room
+    }
+
+    async getChat(roomId){
+        const chat = await this.Chat.findOne({roomId})
+        return chat // array of user, message pairs
+    }
+
+    async addChatSession(roomId){
+        const chat = new this.Chat({roomId})
+        await chat.save()
+    }
+
+    async addChatMessage(roomId, userId, message){
+        const chat = await this.Chat.findOne({roomId})
+        chat.chat.push({user: userId, message})
+        await chat.save()
+    }
 }
 
 module.exports = {
     User,
-    VideoCollection,
     Video,
     Room,
     Chat,

@@ -50,6 +50,17 @@ app.prepare().then(() => {
         return app.render(req, res, '/')
     })
 
+    router.get('/api/room/:room', async (req, res) => {
+        const room = req.params.room
+        const mq = new MongoQ()
+        const roomDat = await mq.checkRoom(room)
+        if(roomDat && roomDat.error) {
+            res.send({ error: 'Room not found' })
+        } else {
+            res.send(roomDat)
+        }
+    })
+
     router.get('/app', async (req, res) => {
         const q = req.query
         const token = req.cookies.token
@@ -76,16 +87,38 @@ app.prepare().then(() => {
         const room = req.query.room
         // check room validity in the database
         const mq = new MongoQ()
-        await mq.checkRoom(room).then((room) => {
-            if(room) {
-                return app.render(req, res, '/watch', { room })
-            } else {
-                return app.render(req, res, '/not_found')
-            }
-        }).catch((err) => {
-            console.error(err)
+        const roomDat = await mq.checkRoom(room)
+        let roomUrl
+        if(roomDat && !roomDat.error) {
+            roomUrl = roomDat.roomUrl
+            return app.render(req, res, '/watch', { room: roomUrl })
+        } else{
             return app.render(req, res, '/not_found')
-        })
+        }
+    })
+
+    router.get('/api/join/:room', async (req, res) => {
+        const room = req.params.room
+        const mq = new MongoQ()
+        const roomData = await mq.getRoom(room)
+        console.log('Room data', roomData)
+        if(roomData && roomData.error) {
+            res.send({ error: 'Room not found' })
+        } else if(roomData!=null) {
+            res.send(roomData.roomUrl)
+        } else {
+            res.send({ error: 'Room not found' })
+        }
+    })
+
+    router.get('/api/owner/room', async (req, res) => {
+        const token = req.cookies.token
+        const user = await tokenVerifier(token)
+        if(user && user.error) {
+            res.send({ error: 'User not found' })
+        } else{
+            res.send(user._id)
+        }
     })
 
     router.get('/health', (req, res) => {
@@ -101,9 +134,7 @@ app.prepare().then(() => {
         console.log('Token', req.cookies)
         let user
         if(token) {
-            console.log('Token found', token)
             user = await tokenVerifier(token)
-            console.log('user', user)
         } else {
             res.redirect('/')
             return
@@ -122,7 +153,35 @@ app.prepare().then(() => {
         console.log('Creating room', room.roomCode)
         const mq = new MongoQ()
         await mq.createRoom(room)
+        res.setHeader('Set-Cookie', `roomDetails=${user._id}+${room.roomUrl}; Path=/watch; HttpOnly; SameSite=Strict; Max-Age=86400`)
         res.send(room)
+    })
+
+    router.post('/api/room/end', async (req, res) => {
+        const token = req.cookies.token
+        if(token) {
+            const user = await tokenVerifier(token)
+            if(user && user.error) {
+                res.send({ error: 'User not found' })
+            }
+            const roomUrl = req.body.room.roomUrl
+            const roomOwner = req.body.room.roomOwner
+            console.log('User', user._id)
+            console.log('Room owner', roomOwner)
+            if(user._id == roomOwner) {
+                console.log('Ending room', roomUrl)
+                const mq = new MongoQ()
+                await mq.endRoom(roomUrl)
+                res.send({ success: 'Room ended' })
+                res.redirect('/app')
+            } else {
+                res.send({ error: 'User not authorized' })
+            }
+        }
+    })
+
+    router.post('/api/video', async (req, res) => {
+
     })
 
     let key, cert
