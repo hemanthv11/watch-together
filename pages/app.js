@@ -50,8 +50,7 @@ export default function App() {
                         <button className="rounded-lg p-2 bg-blue-600 text-white w-2/3 mt-4" onClick={
                             () => {window.location.href = "/create"}
                         }>Create Room</button>
-                        <button className="rounded-lg p-2 bg-blue-600 text-white w-2/3 mt-4">Upload Video</button>
-                        <button className="rounded-lg p-2 bg-blue-600 text-white w-2/3 mt-4">Manage Videos</button>
+
                     </div>
                 </div>
             </div>

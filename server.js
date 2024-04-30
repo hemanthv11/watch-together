@@ -133,9 +133,10 @@ app.prepare().then(() => {
 
     router.get('/api/chat/:roomId', async (req, res) => {
         const { roomId } = req.params
+        console.log('Room', roomId)
         const mq = new MongoQ()
         const chat = await mq.getChat(roomId)
-        res.send(chat)
+        res.send(chat.chat)
     })
 
     router.get('/health', (req, res) => {
@@ -245,6 +246,11 @@ app.prepare().then(() => {
             // save the message to the database
             const mq = new MongoQ()
             mq.addChatMessage(message.room, message.userId, message.message, message.global_name)
+        })
+
+        socket.on('new video', (data) => {
+            socket.broadcast.emit('new video', data)
+            socket.to(data.room).emit('new video', data)
         })
     
         socket.on('disconnect', () => {

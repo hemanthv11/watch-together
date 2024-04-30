@@ -18,7 +18,7 @@ export default function Watch(room) {
     console.log('Room', room)
     const [owner, setOwner] = useState(false) // check if the user is the owner of the room
     const [queue, setQueue] = useState([]) // video queue for VideoQueue component
-    // const [video, setVideo] = useState(room.roomVideos[0]) // video to play in the video player
+    const [video, setVideo] = useState('') // video to play in the video player
     useEffect(async () => {
         // setQueue(room.roomVideos) // loads the video queue
         const res = await axios.get('/api/current/room')
@@ -58,19 +58,19 @@ export default function Watch(room) {
             <div className="flex flex-row">
                 <div className="w-3/4 flex flex-col">
                     <div>
-                        <VideoPlayer vidurl={"https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8"} roomId={room} />
+                        <VideoPlayer owner={owner} roomId={room} />
                     </div>
-                    <div>
+                    {/* <div>
                         <VideoQueue room={room.roomData} queue={queue}/>
-                    </div>
+                    </div> */}
                 </div>
                 <div className="w-1/4 mr-2">
                     <div>
                         <ChatView room={room.roomData}/>
                     </div>
-                    <div>
+                    {/* <div>
                         <ViewersList room={room.roomData}/>
-                    </div>
+                    </div> */}
                 </div>
             </div>
         </div>

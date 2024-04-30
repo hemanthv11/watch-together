@@ -10,8 +10,8 @@ export default function ChatView({ room }) {
     const socketRef = useRef();
     const roomId = room._id
 
-    useEffect(() => {
-        axios.get('/api/auth/username')
+    useEffect(async () => {
+        await axios.get('/api/auth/username')
         .then((res) => {
             console.log('User', res.data)
             setUser(res.data) // TODO: handle guest users
@@ -20,18 +20,16 @@ export default function ChatView({ room }) {
             console.log(err)
         })
 
-        axios.get('/api/current/room')
+        await axios.get('/api/current/room')
         .then((res) => {
             console.log('User', res.data)
             setUserId(res.data)
         })
-    }, [])
-
-    useEffect(async () => {
+        console.log('Room', roomId)
         await axios.get(`/api/chat/${roomId}`)
         .then((res) => {
-            console.log(res.data.chat)
-            setChat(...chat, res.data.chat)
+            console.log('Chat', res.data)
+            setChat(...chat, res.data)
         })
         .catch((err) => {
             console.log(err)
