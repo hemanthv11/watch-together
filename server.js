@@ -340,19 +340,24 @@ app.prepare().then(() => {
 
     let key, cert
     let server
-    try{
+    let httpServer
+    let protocol
+
+    try {
         key = fs.readFileSync('../ssl_keys/key.pem')
         cert = fs.readFileSync('../ssl_keys/cert.pem')
         server = true
     } catch (error) {
-        console.error('SSL keys not found running normal http express server')
+        console.error('SSL keys not found, running normal http express server')
         server = false
     }
 
-    if(server){
+    if (server) {
         httpServer = https.createServer({ key, cert }, router)
+        protocol = 'https'
     } else {
         httpServer = http.createServer(router)
+        protocol = 'http'
     }
 
     const io = new Server(httpServer)
@@ -389,7 +394,7 @@ app.prepare().then(() => {
 
 
     httpServer.listen(port, () => {
-        console.log(`Server is running on https://localhost:${port}/`)
+        console.log(`Server is running on ${protocol}://localhost:${port}/`)
     })
 
 })
