@@ -1,13 +1,13 @@
 import React from "react"
 import { useState, useEffect } from "react"
 import axios from "axios"
-import 'tailwindcss/tailwind.css'
+ 
 
 export default function ViewersList({room}){
     const [viewers, setViewers] = useState([])
     useEffect(() => {
         // get viewer list from server
-        axios.get(`http://localhost:5050/api/viewers/${room}`).then((res) => {
+        axios.get(`/api/viewers/${room}`).then((res) => {
             setViewers(res.data)
         }).catch((err) => {
             console.log(err)

@@ -23,7 +23,7 @@ export default function Create() {
     };
     async function getRoom() {
         const roomName = document.getElementById('room-name').value
-        await axios.post('http://127.0.0.1:5050/api/room', {name: roomName}, {withCredentials: true})
+        await axios.post('/api/room', {name: roomName}, {withCredentials: true})
         .then((res) => {
             let room = res.data
             let roomCode = room.roomCode

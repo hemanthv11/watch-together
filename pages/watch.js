@@ -62,7 +62,7 @@ export default function Watch(room) {
                     </div>
                     {/* <div>
                         <VideoQueue room={room.roomData} queue={queue}/>
-                    </div> */}
+                    </div> */}  
                 </div>
                 <div className="w-1/4 mr-2">
                     <div>
