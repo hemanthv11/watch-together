@@ -202,6 +202,135 @@ app.prepare().then(() => {
 
     })
 
+    // Register a new local video stream
+    router.post('/api/videos/register-local-stream', async (req, res) => {
+        const token = req.cookies.token;
+        let user;
+        if (token) {
+            user = await tokenVerifier(token);
+            if (user && user.error) {
+                return res.status(401).send({ error: 'Unauthorized: Invalid token' });
+            }
+        } else {
+            return res.status(401).send({ error: 'Unauthorized: Missing token' });
+        }
+
+        const { videoName, localM3u8Path, helperAppPort, description, duration, isPubliclyAccessible } = req.body;
+
+        if (!videoName || !localM3u8Path || !helperAppPort) {
+            return res.status(400).send({ error: 'Bad Request: Missing required fields (videoName, localM3u8Path, helperAppPort)' });
+        }
+
+        const videoData = {
+            uploader: user._id, // Assuming tokenVerifier returns user with _id
+            videoName,
+            localM3u8Path,
+            helperAppPort,
+            description,
+            duration,
+            isPubliclyAccessible: isPubliclyAccessible === undefined ? false : isPubliclyAccessible,
+        };
+
+        try {
+            const mq = new MongoQ();
+            const newVideo = await mq.registerLocalStream(videoData);
+            res.status(201).send(newVideo);
+        } catch (error) {
+            console.error('Error registering local stream:', error);
+            res.status(500).send({ error: 'Internal Server Error' });
+        }
+    });
+
+    // Get all local streams for the authenticated user
+    router.get('/api/videos/my-local-streams', async (req, res) => {
+        const token = req.cookies.token;
+        let user;
+        if (token) {
+            user = await tokenVerifier(token);
+            if (user && user.error) {
+                return res.status(401).send({ error: 'Unauthorized: Invalid token' });
+            }
+        } else {
+            return res.status(401).send({ error: 'Unauthorized: Missing token' });
+        }
+
+        try {
+            const mq = new MongoQ();
+            const videos = await mq.getRegisteredVideosForUser(user._id); // Assuming user._id
+            res.status(200).send(videos);
+        } catch (error) {
+            console.error('Error fetching user\'s local streams:', error);
+            res.status(500).send({ error: 'Internal Server Error' });
+        }
+    });
+
+    // Update a specific local stream for the authenticated user
+    router.put('/api/videos/my-local-streams/:videoId', async (req, res) => {
+        const token = req.cookies.token;
+        let user;
+        if (token) {
+            user = await tokenVerifier(token);
+            if (user && user.error) {
+                return res.status(401).send({ error: 'Unauthorized: Invalid token' });
+            }
+        } else {
+            return res.status(401).send({ error: 'Unauthorized: Missing token' });
+        }
+
+        const { videoId } = req.params;
+        const updateData = req.body;
+
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).send({ error: 'Bad Request: No update data provided' });
+        }
+
+        try {
+            const mq = new MongoQ();
+            const updatedVideo = await mq.updateRegisteredVideo(videoId, user._id, updateData); // Assuming user._id
+            if (!updatedVideo) {
+                return res.status(404).send({ error: 'Not Found: Video not found or user not authorized to update' });
+            }
+            res.status(200).send(updatedVideo);
+        } catch (error) {
+            console.error('Error updating local stream:', error);
+            if (error.kind === 'ObjectId') { // Mongoose specific error for invalid ObjectId format
+                return res.status(400).send({ error: 'Bad Request: Invalid videoId format' });
+            }
+            res.status(500).send({ error: 'Internal Server Error' });
+        }
+    });
+
+    // Delete a specific local stream for the authenticated user
+    router.delete('/api/videos/my-local-streams/:videoId', async (req, res) => {
+        const token = req.cookies.token;
+        let user;
+        if (token) {
+            user = await tokenVerifier(token);
+            if (user && user.error) {
+                return res.status(401).send({ error: 'Unauthorized: Invalid token' });
+            }
+        } else {
+            return res.status(401).send({ error: 'Unauthorized: Missing token' });
+        }
+
+        const { videoId } = req.params;
+
+        try {
+            const mq = new MongoQ();
+            const deletedVideo = await mq.deleteRegisteredVideo(videoId, user._id); // Assuming user._id
+            if (!deletedVideo) {
+                return res.status(404).send({ error: 'Not Found: Video not found or user not authorized to delete' });
+            }
+            res.status(200).send({ message: 'Video deleted successfully' }); // Or res.status(204).send();
+        } catch (error) {
+            console.error('Error deleting local stream:', error);
+            if (error.kind === 'ObjectId') { // Mongoose specific error for invalid ObjectId format
+                return res.status(400).send({ error: 'Bad Request: Invalid videoId format' });
+            }
+            res.status(500).send({ error: 'Internal Server Error' });
+        }
+    });
+
     router.post('/api/chat', async (req, res) => {
         const { roomId, message, userId, global_name } = req.body
         const mq = new MongoQ()

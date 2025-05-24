@@ -60,9 +60,9 @@ export default function Watch(room) {
                     <div>
                         <VideoPlayer owner={owner} roomId={room} />
                     </div>
-                    {/* <div>
-                        <VideoQueue room={room.roomData} queue={queue}/>
-                    </div> */}
+                    <div>
+                        <VideoQueue room={room.roomData} queue={room.roomData.roomVideos}/>
+                    </div>
                 </div>
                 <div className="w-1/4 mr-2">
                     <div>

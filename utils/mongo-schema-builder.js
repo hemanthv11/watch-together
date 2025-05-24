@@ -83,7 +83,7 @@ const userSchema = new mongoose.Schema({
     refreshToken: String,
 
     // Site specific data
-    id: {
+    id: { // Ensured this is type: mongoose.Schema.Types.ObjectId, required: true, unique: true
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         unique: true
@@ -98,26 +98,37 @@ const userSchema = new mongoose.Schema({
 
 
 const videoSchema = new mongoose.Schema({
-    id: {
+    uploader: { // Renamed from id, references 'User'
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         ref: 'User'
     },
-    videoId: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        unique: true
-    },
+    // videoId field removed, Mongoose's default _id will be used
     videoName: {
         type: String,
         required: true
     },
-    videoDuration: {
-        type: Number
+    description: {
+        type: String
     },
-    videoUrl: {
+    localM3u8Path: { // Stores path like "/streams/<some_id>/playlist.m3u8"
         type: String,
         required: true
+    },
+    helperAppPort: {
+        type: Number,
+        required: true
+    },
+    duration: { // Renamed from videoDuration
+        type: Number
+    },
+    isPubliclyAccessible: {
+        type: Boolean,
+        default: false
+    },
+    addedDate: {
+        type: Date,
+        default: Date.now
     }
 })
 
@@ -136,7 +147,7 @@ const roomSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    roomOwner: {
+    roomOwner: { // Ensures this refers to User via mongoose.Schema.Types.ObjectId
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         ref: 'User'
@@ -145,14 +156,14 @@ const roomSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    roomMembers: {
+    roomMembers: { // Ensures this is an array of mongoose.Schema.Types.ObjectId referencing User
         type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
     },
     roomMap: {
         type: Map,
         of: String
     },
-    roomVideos: {
+    roomVideos: { // Ensures this is an array of mongoose.Schema.Types.ObjectId referencing Video
         type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Video' }]
     }
 })
@@ -185,10 +196,33 @@ class MongoQ{
         this.Chat = Chat
     }
 
-    async createRoom(room){
+    async registerLocalStream(videoData) {
+        const newVideo = new this.Video(videoData);
+        await newVideo.save();
+        return newVideo;
+    }
+
+    async getRegisteredVideosForUser(uploaderId) {
+        return await this.Video.find({ uploader: uploaderId });
+    }
+
+    async getRegisteredVideoById(videoId) {
+        return await this.Video.findById(videoId);
+    }
+
+    async updateRegisteredVideo(videoId, uploaderId, updateData) {
+        return await this.Video.findOneAndUpdate({ _id: videoId, uploader: uploaderId }, updateData, { new: true });
+    }
+
+    async deleteRegisteredVideo(videoId, uploaderId) {
+        return await this.Video.findOneAndDelete({ _id: videoId, uploader: uploaderId });
+    }
+
+    async createRoom(roomDetails){ // roomDetails.roomOwner should be a User.id
         // create roomId
-        room.roomId = new mongoose.Types.ObjectId()
-        const newRoom = new this.Room(room)
+        roomDetails.roomId = new mongoose.Types.ObjectId()
+        // roomDetails.roomOwner should already be a valid ObjectId referencing a User
+        const newRoom = new this.Room(roomDetails)
         await newRoom.save()
         return newRoom.roomUrl
     }
@@ -198,31 +232,52 @@ class MongoQ{
         return room
     }
     
-    async addViewer(roomUrl, userId){
+    async addViewer(roomUrl, userId){ // userId should be User._id
         const room = await this.Room.findOne({roomUrl})
-        room.roomMembers.push(userId)
-        await room.save()
+        if (room && userId) {
+            // Ensure userId is not already in roomMembers before pushing
+            if (!room.roomMembers.find(memberId => memberId.equals(userId))) {
+                room.roomMembers.push(userId);
+                await room.save();
+            }
+        }
     }
 
-    async checkOwnerVideoAccess(roomUrl, userId){
-        const video = await this.Video.findOne({userId})
-    }
+    // This method seems incomplete or its purpose unclear in the original code.
+    // Based on the schema changes, it might be intended to check video ownership.
+    // async checkOwnerVideoAccess(videoId, userId){ // videoId is Video._id, userId is User._id
+    //     const video = await this.Video.findOne({_id: videoId, uploader: userId });
+    //     return !!video; // Returns true if video found (user is owner), false otherwise
+    // }
 
-    async removeViewer(roomUrl, userId){
+    async removeViewer(roomUrl, userId){ // userId should be User._id
         const room = await this.Room.findOne({roomUrl})
-        room.roomMembers = room.roomMembers.filter((id) => id !== userId)
-        await room.save()
+        if (room && userId) {
+            room.roomMembers = room.roomMembers.filter((memberId) => !memberId.equals(userId));
+            await room.save()
+        }
     }
 
-    async addVideoToQueue(roomUrl, videoId){
+    async addVideoToRoom(roomUrl, videoId){ // videoId should be Video._id
         const room = await this.Room.findOne({roomUrl})
-        room.roomVideos.push(videoId)
-        await room.save()
+        if (room && videoId) {
+            // Ensure videoId is not already in roomVideos before pushing
+            if (!room.roomVideos.find(vId => vId.equals(videoId))) {
+                room.roomVideos.push(videoId);
+                await room.save();
+            }
+        }
     }
 
-    async endRoom(roomUrl){
-        const room = await this.Room.deleteOne({roomUrl})
-        return room
+    async endRoom(roomUrl, ownerId){ // ownerId should be User.id (which is User._id)
+        const room = await this.Room.findOne({roomUrl});
+        if (room && room.roomOwner.equals(ownerId)) {
+            // Also delete associated chat session
+            await this.Chat.deleteOne({ roomId: room.roomId });
+            const result = await this.Room.deleteOne({ roomUrl });
+            return result;
+        }
+        return null; // Or throw an error indicating permission denied or room not found
     }
 
     async getRoom(roomCode){
@@ -230,32 +285,52 @@ class MongoQ{
         return room
     }
 
-    async getGlobalName(userId){
-        const user = await this.User.findOne({id: userId})
-        return user.global_name
+    async getGlobalName(userId){ // userId should be User._id
+        const user = await this.User.findById(userId) // Changed to findById for _id
+        return user ? user.global_name : null;
     }
 
-    async getChat(roomId){
+    async getChat(roomId){ // roomId should be Room._id (which is Room.roomId)
         const chat = await this.Chat.findOne({roomId})
         return chat // array of user, message pairs
     }
 
-    async addChatSession(roomId){
-        const chat = new this.Chat({roomId})
+    async addChatSession(roomId){ // roomId should be Room._id (which is Room.roomId)
+        let chat = await this.Chat.findOne({roomId : roomId});
+        if (chat) {
+            return chat; // Return existing chat session if found
+        }
+        chat = new this.Chat({roomId: roomId}) // Use the passed roomId
         // add a welcome message to the chat
-        chat.chat.push({user: process.env.SYSTEM_ID, message: 'Welcome to the chat', global_name: 'System'})
+        let systemUserId;
+        try {
+            // Ensure process.env.SYSTEM_ID is treated as a string for ObjectId conversion
+            systemUserId = new mongoose.Types.ObjectId(String(process.env.SYSTEM_ID));
+        } catch (error) {
+            console.warn("SYSTEM_ID is not a valid ObjectId. Chat message from 'System' will not have a valid user ref.", error);
+            // Fallback: Storing null or a predefined system user string/ID might be an option
+            // For now, 'user' field might be absent or invalid for this message if SYSTEM_ID is bad
+            systemUserId = null; // Or some other placeholder if your schema allows
+        }
+        // Ensure the user field in chat schema can handle null if SYSTEM_ID is invalid and Mongoose validation is strict
+        chat.chat.push({user: systemUserId, message: 'Welcome to the chat', global_name: 'System'})
         await chat.save()
+        return chat; // Return the created chat session
     }
 
-    async addChatMessage(roomId, userId, message, global_name){
-        let chat = await this.Chat.findOne({roomId})
+    async addChatMessage(roomId, userId, message, global_name){ // roomId, userId should be Room._id, User._id
+        let chat = await this.Chat.findOne({roomId: roomId}) // Use the passed roomId
         // if chat session does not exist, create one
         if(!chat){
-            chat = await this.addChatSession(roomId)
+            // Pass roomId when creating a new chat session
+            chat = await this.addChatSession(roomId) // Pass roomId here
         }
         if(message.length === 0)
             return
-        chat.chat.push({userId, message, global_name})
+
+        // Ensure userId is an ObjectId if it's coming as a string
+        const userObjectId = typeof userId === 'string' ? new mongoose.Types.ObjectId(userId) : userId;
+        chat.chat.push({user: userObjectId, message, global_name}) // user field should be 'user' not 'userId' as per schema
         await chat.save()
     }
 }
